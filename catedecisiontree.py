@@ -84,7 +84,8 @@ def select_best_feature_multi_split(X, Y, candidates, criterion = 'gini'):
         return min_feature, min_gini
             
 def select_best_feature_binary_split(X, Y, candidates, responds_names, criterion = 'gini'):
-    '''Select the best feature and perform binary split
+    '''Select the best feature and perform binary split, can only be used in binary classification 
+       task. 
     Parameters
     ----------
     X: a Pandas DataFrame, shape n by m
@@ -118,43 +119,58 @@ def select_best_feature_binary_split(X, Y, candidates, responds_names, criterion
         for feature in candidates:
             
             ratios = []
+            # Dictionary used to store the number of subsamples and the ratio of label 1 vs 0
             subsample_num = {}
             
             for feature_value in X[feature].unique():
+                # subset that equals to a specific feature value
                 subset = X[feature] == feature_value
+                # count the number of different labels and store it in an array
                 count_temp = [sum(Y[subset] == responds_names[i]) for i in range(len(responds_names))]
+                # Calculate the ratio of label
                 ratio_temp =  count_temp / sum(count_temp)
-                subsample_num[ratio_temp[0]] = (count_temp, feature_value)
+                # 
+                #subsample_num[ratio_temp[0]] = (count_temp, feature_value)
+                subsample_num[feature_value] = (count_temp, ratio_temp[0])
+                # Store the ratio of the first label
                 ratios.append(ratio_temp[0])
             
             ratios = sorted(ratios)
             
             for split in ratios[:-1]:
                 
+                # not_larger and larger value is used to store the
+                # cumulated value for two classes
                 not_larger = [0, 0]
                 larger = [0, 0]
+                
+                # Lists used to store feature names based on different split
                 larger_feature_value = []
                 not_larger_feature_value = []
-                for test_ratio in subsample_num:
-                    temp_subsample_num = subsample_num[test_ratio]
+                
+                for test_feature in subsample_num:
+                    test_count, test_ratio = subsample_num[test_feature]
                 
                     if test_ratio > split:
                         
-                        larger = [larger[i] + temp_subsample_num[0][i] for i in range(2)]
-                        larger_feature_value.append(temp_subsample_num[1])
+                        larger = [larger[i] + test_count[i] for i in range(2)]
+                        larger_feature_value.append(test_feature)
                     else:
-                        not_larger = [not_larger[i] + temp_subsample_num[0][i] for i in range(2)]
-                        not_larger_feature_value.append(temp_subsample_num[1])
+                        not_larger = [not_larger[i] + test_count[i] for i in range(2)]
+                        not_larger_feature_value.append(test_feature)
+                
                 if sum(larger) == 0:
                     continue
                 else:
                     gini_larger = 1 - (larger[0]/sum(larger)) ** 2 - (larger[1]/sum(larger)) ** 2
+                
                 if sum(not_larger) == 0:
                     continue
                 else:
                     gini_not_larger = 1 - (not_larger[0]/sum(not_larger)) ** 2\
                                         - (not_larger[1]/sum(not_larger)) ** 2
-                        
+                
+                # calculate the current gini_index based on the current split.
                 gini_index = (gini_larger * sum(larger) + gini_not_larger * sum(not_larger))\
                                 / (sum(larger) + sum(not_larger))
                 
@@ -205,7 +221,7 @@ def TreeGenerate(X, Y, features,
     current_node.label = Y.loc[:, respond].value_counts().idxmax()
     
     # Initialize the label_names attribute of the current node
-    current_node.label_names = list(Y[respond].unique())
+    current_node.label_names = sorted(list(Y[respond].unique()))
     
     # Calculate and store other attributes of the current node
     current_node.gini = gini_value(Y.loc[:, respond])
@@ -429,6 +445,7 @@ def export_graph(node, file_name, filled = False):
     # Write the header 
     out_file.write('digraph Tree {\n')   
     out_file.write('node [shape=box')
+    
     if filled:
         # Write the color related line and brew colors based on the 
         # number of label values.
@@ -441,4 +458,6 @@ def export_graph(node, file_name, filled = False):
     recursive(node, out_file, filled)
     
     out_file.write("}")
+    
+
     
