@@ -205,6 +205,10 @@ def TreeGenerate(X, Y, features,
         The value of the current feature at current node.
     split: string
         The option to split each node: 'mutiway', 'binary'
+    min_split: int
+        The minimum sample number in order to perform a split
+    gini_decrease_min: float
+        The minimum decrease in gini index in order to perform the split
     
     Returns
     -------
